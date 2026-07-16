@@ -16,6 +16,13 @@ separate Superwise account, so it can actually be used on real deal/legal docume
    and add a small amount of billing credit.
 2. Copy `.env.example` to `.env` and paste your key into `ANTHROPIC_API_KEY`.
 
+## Cost & model
+
+Both the document analysis and the chat run on `claude-haiku-4-5` (set in `analyzer.py` via
+`MODEL`) — the cheapest current Claude model, to keep this app's running cost minimal. Swap it to
+`claude-sonnet-5` there if a particular document set needs stronger reasoning (dense or ambiguous
+contracts) and cost is less of a concern.
+
 ## Run it locally
 
 Double-click `start.bat` (first run installs dependencies automatically — needs Python 3).

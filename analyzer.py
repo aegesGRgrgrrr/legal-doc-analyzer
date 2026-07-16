@@ -7,11 +7,12 @@ from pypdf import PdfReader
 from docx import Document as DocxDocument
 from anthropic import Anthropic
 
-# Sonnet 5 for stronger multi-step legal reasoning than a fast/cheap model
-# would give — a single analysis costs a few cents to ~tens of cents
-# depending on document length. Swap to claude-haiku-4-5 to cut cost.
-MODEL = "claude-sonnet-5"
-# Sonnet 5 has a 200K-token context window shared by input + output. These
+# Haiku 4.5 — cheapest current Claude model, used for both the document
+# analysis and the follow-up chat to keep this app's running cost minimal.
+# Swap to claude-sonnet-5 if a given document set needs stronger reasoning
+# (e.g. dense/ambiguous contracts) and cost is less of a concern.
+MODEL = "claude-haiku-4-5"
+# This model has a 200K-token context window shared by input + output. These
 # caps sit near the top of what fits alongside the schema/prompt overhead and
 # the reserved 8192-token output — uploads can total up to 800MB on disk (see
 # MAX_CONTENT_LENGTH in app.py), but only the text below actually reaches the
