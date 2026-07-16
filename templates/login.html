@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legal Document Analyzer - Sign In</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .login-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 32px 28px; width: 100%; max-width: 360px; text-align: center;
+  }
+  .login-card .wordmark { font-family: Georgia, serif; font-size: 22px; color: var(--navy); }
+  .login-card p { color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
+  .login-card input[type=password] { text-align: center; }
+  .login-card button {
+    width: 100%; margin-top: 14px; background: var(--navy); color: #fff; border: none;
+    border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .login-card button:hover { background: #0c1c37; }
+  .error { color: #b23b3b; font-size: 12.5px; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="wordmark">CROW HOLDINGS</div>
+    <p>Legal Document Analyzer</p>
+    <form method="post">
+      <input type="password" name="password" placeholder="Password" autofocus required>
+      <button type="submit">Sign In</button>
+    </form>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  </div>
+</body>
+</html>

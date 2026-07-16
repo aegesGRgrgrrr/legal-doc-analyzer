@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legal Document Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="app-header">
+  <div class="left">
+    <span class="wordmark">CROW HOLDINGS</span>
+    <span class="tag">Legal Document Analyzer</span>
+  </div>
+  <a class="logout" href="/logout">Sign out</a>
+</header>
+
+<main>
+  <div class="dropzone-section">
+    <form id="upload-form" enctype="multipart/form-data">
+      <fieldset>
+        <legend>Upload Document(s) for Review</legend>
+        <div class="section-desc">
+          Upload one contract (or a main agreement plus its amendments) as PDF or Word (.docx).
+          Claude will extract key clauses, flag risks, list each party's obligations, and note
+          any standard protections that appear to be missing.
+        </div>
+        <div class="dropzone" id="dropzone">
+          <p class="big">Click to choose files, or drag &amp; drop here</p>
+          <p>PDF or .docx — you can select multiple files for one document set</p>
+        </div>
+        <input type="file" id="file-input" name="documents"
+               accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+               multiple hidden>
+        <div id="file-list"></div>
+      </fieldset>
+
+      <div id="status" class="status-box"></div>
+
+      <div class="submit-bar">
+        <button type="submit" id="submit-btn">Analyze Document</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="results">
+    <div class="result-header">
+      <h2 id="result-doc-type">Document Analysis</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span class="confidence-chip" id="result-confidence"></span>
+        <button type="button" class="secondary-btn print-btn" id="print-btn"
+                style="padding:8px 14px; font-size:12.5px; border-radius:6px; cursor:pointer;">
+          Print / Save as PDF
+        </button>
+      </div>
+    </div>
+    <div class="filenames" id="result-filenames"></div>
+
+    <div class="summary-box" id="result-summary"></div>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <h4>Parties</h4>
+        <div id="result-parties"></div>
+      </div>
+      <div class="meta-card">
+        <h4>Key Dates</h4>
+        <div id="result-dates"></div>
+      </div>
+    </div>
+
+    <fieldset>
+      <legend>Clauses &amp; Risk Flags</legend>
+      <div id="result-clauses"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Obligations by Party</legend>
+      <div class="obligation-head">
+        <span>Party</span><span>Obligation</span><span>Trigger / Deadline</span>
+      </div>
+      <div id="result-obligations"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Missing / Absent Terms</legend>
+      <div id="result-missing"></div>
+    </fieldset>
+
+    <div class="disclaimer">
+      AI-generated review for internal discussion purposes only — it is not legal advice and does
+      not substitute for review by qualified counsel. Verify all figures, dates, and clause
+      language against the original document before relying on this summary.
+    </div>
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
