@@ -39,8 +39,17 @@ amendments), click **Analyze Document**. Results appear on the same page:
 - **Obligations by Party** — concrete commitments and their triggers/deadlines
 - **Missing / Absent Terms** — standard protections that appear to be missing, with why it
   matters and a recommendation
+- **Ask About This Document** — a chat box to ask follow-up questions ("what happens if the
+  tenant misses a payment?"). Claude answers using only the uploaded document's text, held in
+  your browser tab for the session (see Limitations below) — nothing is saved server-side.
 
 Use **Print / Save as PDF** to save a copy of the review for the file.
+
+Uploads can total up to 800MB across all files. That said, the actual review is bounded by
+Claude's context window, not file size — only the first ~600K characters of *extracted text*
+across all documents are analyzed (most of an 800MB PDF set is images/fonts, not text, so this
+covers the vast majority of real document sets). If a set is too large, a banner on the results
+says so; split the upload into smaller batches to get full coverage.
 
 Scanned/image-only PDFs (no text layer) can't be read — there's no OCR step. Old `.doc` files
 need to be saved as `.docx` or PDF first.
@@ -83,5 +92,12 @@ its data.
 - This is an AI-assisted review for internal discussion, **not legal advice** — always verify
   against the source document and involve counsel for anything that matters.
 - No OCR: scanned/image PDFs without a text layer can't be analyzed.
-- Nothing is stored server-side beyond the life of the request — documents aren't persisted to
-  disk or a database.
+- Nothing is stored server-side beyond the life of each request — documents aren't persisted to
+  disk or a database. The extracted document text is sent back to your browser tab so the chat
+  feature can ask follow-up questions without the server keeping any state; it's held only in that
+  tab's memory and is gone on refresh or if you close the tab.
+- Very large multi-file uploads (approaching 800MB) can legitimately take several minutes to read
+  and extract text from before analysis even starts — that's expected, not a hang.
+- If Render's edge networking is in front of this app, its own request-size limits (independent of
+  this app's 800MB setting) could reject very large uploads before they reach the server; if that
+  happens with real-world documents, let Render support know or split the upload smaller.

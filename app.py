@@ -8,12 +8,12 @@ from flask import (
     session, redirect, url_for,
 )
 
-from analyzer import extract_document_text, analyze_document, AnalyzerError
+from analyzer import extract_document_text, analyze_document, chat_about_document, AnalyzerError
 
 load_dotenv()
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB total upload cap
+app.config["MAX_CONTENT_LENGTH"] = 800 * 1024 * 1024  # 800MB total upload cap
 # Falls back to a random key if unset, which just means everyone is logged
 # out whenever the server restarts — fine for local use, but set
 # FLASK_SECRET_KEY in .env for a stable session across restarts.
@@ -52,7 +52,7 @@ def logout():
 
 @app.errorhandler(413)
 def handle_too_large(e):
-    return jsonify({"error": "Those files are too large (100MB max total). Try fewer or smaller files."}), 413
+    return jsonify({"error": "Those files are too large (800MB max total). Try fewer or smaller files."}), 413
 
 
 @app.route("/")
@@ -69,7 +69,7 @@ def analyze():
         return jsonify({"error": "Please upload at least one PDF or Word (.docx) document."}), 400
 
     try:
-        document_text = extract_document_text(files)
+        document_text, truncated = extract_document_text(files)
         result = analyze_document(document_text)
     except AnalyzerError as e:
         return jsonify({"error": str(e)}), 400
@@ -77,7 +77,28 @@ def analyze():
         return jsonify({"error": f"Unexpected error while analyzing the document: {e}"}), 500
 
     result["_filenames"] = [f.filename for f in files]
+    result["_truncated"] = truncated
+    # Handed back to the browser so /chat can ask follow-up questions about
+    # the same text without the server persisting anything between requests.
+    result["_document_text"] = document_text
     return jsonify(result)
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    payload = request.get_json(silent=True) or {}
+    document_text = payload.get("document_text", "")
+    question = payload.get("question", "")
+    history = payload.get("history", [])
+
+    try:
+        answer = chat_about_document(document_text, question, history)
+    except AnalyzerError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error answering the question: {e}"}), 500
+
+    return jsonify({"answer": answer})
 
 
 def _lan_ip():

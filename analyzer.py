@@ -11,11 +11,16 @@ from anthropic import Anthropic
 # would give — a single analysis costs a few cents to ~tens of cents
 # depending on document length. Swap to claude-haiku-4-5 to cut cost.
 MODEL = "claude-sonnet-5"
-# Sonnet 5 has a 200K-token context window shared by input + output.
-# 500K chars is roughly 145K-165K tokens depending on document density,
-# leaving headroom for the prompt and the reserved output tokens.
-MAX_CHARS_PER_DOC = 150_000
-MAX_TOTAL_CHARS = 500_000
+# Sonnet 5 has a 200K-token context window shared by input + output. These
+# caps sit near the top of what fits alongside the schema/prompt overhead and
+# the reserved 8192-token output — uploads can total up to 800MB on disk (see
+# MAX_CONTENT_LENGTH in app.py), but only the text below actually reaches the
+# model; anything past MAX_TOTAL_CHARS is dropped and flagged via `truncated`
+# in the extract_document_text result, since most of an 800MB PDF set is
+# images/fonts, not extractable text, and text volume is what the context
+# window actually limits.
+MAX_CHARS_PER_DOC = 350_000
+MAX_TOTAL_CHARS = 600_000
 
 CLAUSE_CATEGORIES = [
     "Indemnification", "Limitation of Liability", "Termination",
@@ -159,9 +164,12 @@ def _extract_docx(fs):
 
 
 def extract_document_text(file_storage_list):
-    """file_storage_list: list of werkzeug FileStorage objects (.pdf or .docx)."""
+    """file_storage_list: list of werkzeug FileStorage objects (.pdf or .docx).
+    Returns (text, truncated) — truncated is True if the combined text had to
+    be cut short to fit the model's context window."""
     chunks = []
     total = 0
+    truncated = False
     for fs in file_storage_list:
         if not fs or not fs.filename:
             continue
@@ -177,17 +185,20 @@ def extract_document_text(file_storage_list):
         else:
             raise AnalyzerError(f"Unsupported file type: '{fs.filename}'. Only .pdf and .docx files are supported.")
 
-        doc_text = doc_text[:MAX_CHARS_PER_DOC]
+        if len(doc_text) > MAX_CHARS_PER_DOC:
+            doc_text = doc_text[:MAX_CHARS_PER_DOC]
+            truncated = True
         if not doc_text:
             continue
         chunk = f"\n\n===== DOCUMENT: {fs.filename} =====\n{doc_text}"
         if total + len(chunk) > MAX_TOTAL_CHARS:
             chunk = chunk[: max(0, MAX_TOTAL_CHARS - total)]
+            truncated = True
         chunks.append(chunk)
         total += len(chunk)
         if total >= MAX_TOTAL_CHARS:
             break
-    return "".join(chunks).strip()
+    return "".join(chunks).strip(), truncated
 
 
 def analyze_document(document_text: str) -> dict:
@@ -244,3 +255,66 @@ DOCUMENT(S):
             return block.input
 
     raise AnalyzerError("Claude did not return a structured analysis. Try again.")
+
+
+CHAT_INSTRUCTIONS = """You are a helpful assistant answering follow-up questions about the \
+document(s) below, for someone who has already seen an automated clause/risk review of them.
+
+Rules:
+- Answer only from what the document(s) actually say. If the answer isn't in the text, say so \
+plainly rather than guessing or inventing specifics.
+- Reference section/article numbers or defined terms when it helps the reader locate the answer.
+- Keep answers concise and direct — a few sentences unless the question genuinely needs more.
+- This is not legal advice; note that if the question is asking you to make a legal judgment call \
+rather than report what the document says."""
+
+
+def chat_about_document(document_text: str, question: str, history: list) -> str:
+    """history: list of {"role": "user"|"assistant", "content": str} prior turns (not including
+    the new question). The document text is sent as a cached system block so repeated follow-up
+    questions on the same document don't reprocess it at full cost each time."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise AnalyzerError(
+            "No Anthropic API key configured. Add ANTHROPIC_API_KEY to the .env file "
+            "in the legal-doc-analyzer folder and restart the server."
+        )
+    if not document_text:
+        raise AnalyzerError("No document text available to answer questions about — try re-analyzing the document.")
+    if not question or not question.strip():
+        raise AnalyzerError("Please enter a question.")
+
+    client = Anthropic(api_key=api_key)
+
+    system = [
+        {"type": "text", "text": CHAT_INSTRUCTIONS},
+        {
+            "type": "text",
+            "text": f"DOCUMENT(S):\n{document_text}",
+            "cache_control": {"type": "ephemeral"},
+        },
+    ]
+
+    messages = []
+    for turn in history or []:
+        role = turn.get("role")
+        content = turn.get("content")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": question})
+
+    try:
+        resp = client.messages.create(
+            model=MODEL,
+            max_tokens=1536,
+            system=system,
+            messages=messages,
+        )
+    except Exception as e:
+        raise AnalyzerError(f"Claude API request failed: {e}") from e
+
+    text_parts = [b.text for b in resp.content if b.type == "text"]
+    answer = "".join(text_parts).strip()
+    if not answer:
+        raise AnalyzerError("Claude did not return an answer. Try again.")
+    return answer

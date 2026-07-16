@@ -93,6 +93,10 @@ function riskClass(level) {
   return ["high", "medium", "low"].includes(v) ? v : "none";
 }
 
+// --- Chat state: held only in this tab, never persisted server-side ---
+let currentDocumentText = "";
+let chatHistory = [];
+
 function renderResults(data) {
   document.getElementById("result-doc-type").textContent = data.document_type || "Document Analysis";
   document.getElementById("result-confidence").textContent =
@@ -100,6 +104,13 @@ function renderResults(data) {
   document.getElementById("result-filenames").textContent =
     (data._filenames || []).join(", ");
   document.getElementById("result-summary").textContent = data.summary || "";
+
+  document.getElementById("truncation-warning").style.display = data._truncated ? "block" : "none";
+
+  currentDocumentText = data._document_text || "";
+  chatHistory = [];
+  document.getElementById("chat-messages").innerHTML = "";
+  clearChatStatus();
 
   const partiesEl = document.getElementById("result-parties");
   const parties = data.parties || [];
@@ -187,3 +198,81 @@ form.addEventListener("submit", async (e) => {
 });
 
 document.getElementById("print-btn").addEventListener("click", () => window.print());
+
+// --- Chat about the document ---
+const chatMessagesEl = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send-btn");
+const chatStatusEl = document.getElementById("chat-status");
+
+function setChatStatus(kind, html) {
+  chatStatusEl.className = `status-box ${kind}`;
+  chatStatusEl.innerHTML = html;
+}
+function clearChatStatus() {
+  chatStatusEl.className = "status-box";
+  chatStatusEl.innerHTML = "";
+}
+
+function appendChatBubble(role, text) {
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${role}`;
+  bubble.textContent = text;
+  chatMessagesEl.appendChild(bubble);
+  bubble.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function sendChatQuestion() {
+  const question = chatInput.value.trim();
+  if (!question) return;
+  if (!currentDocumentText) {
+    setChatStatus("error", "No document text available — analyze a document first.");
+    return;
+  }
+
+  appendChatBubble("user", question);
+  chatInput.value = "";
+  chatInput.disabled = true;
+  chatSendBtn.disabled = true;
+  clearChatStatus();
+  setChatStatus("info", '<span class="spinner"></span>Thinking...');
+
+  try {
+    const resp = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        document_text: currentDocumentText,
+        question,
+        history: chatHistory,
+      }),
+    });
+    const payload = await resp.json().catch(() => null);
+
+    if (!resp.ok) {
+      clearChatStatus();
+      setChatStatus("error", (payload && payload.error) || "Something went wrong answering that question.");
+      return;
+    }
+
+    clearChatStatus();
+    appendChatBubble("assistant", payload.answer);
+    chatHistory.push({ role: "user", content: question });
+    chatHistory.push({ role: "assistant", content: payload.answer });
+  } catch (err) {
+    clearChatStatus();
+    setChatStatus("error", "Network error talking to the server. Is it still running?");
+  } finally {
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
+    chatInput.focus();
+  }
+}
+
+chatSendBtn.addEventListener("click", sendChatQuestion);
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendChatQuestion();
+  }
+});
