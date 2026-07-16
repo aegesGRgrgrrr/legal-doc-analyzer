@@ -206,7 +206,7 @@ def analyze_document(document_text: str) -> dict:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise AnalyzerError(
-            "No Anthropic API key configured. Add ANTHROPIC_API_KEY to the .env file "
+            "No API key configured. Add ANTHROPIC_API_KEY to the .env file "
             "in the legal-doc-analyzer folder and restart the server."
         )
     if not document_text:
@@ -249,13 +249,13 @@ DOCUMENT(S):
             messages=[{"role": "user", "content": prompt}],
         )
     except Exception as e:
-        raise AnalyzerError(f"Claude API request failed: {e}") from e
+        raise AnalyzerError(f"AI request failed: {e}") from e
 
     for block in resp.content:
         if block.type == "tool_use" and block.name == "analyze_legal_document":
             return block.input
 
-    raise AnalyzerError("Claude did not return a structured analysis. Try again.")
+    raise AnalyzerError("Did not return a structured analysis. Try again.")
 
 
 CHAT_INSTRUCTIONS = """You are a helpful assistant answering follow-up questions about the \
@@ -277,7 +277,7 @@ def chat_about_document(document_text: str, question: str, history: list) -> str
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise AnalyzerError(
-            "No Anthropic API key configured. Add ANTHROPIC_API_KEY to the .env file "
+            "No API key configured. Add ANTHROPIC_API_KEY to the .env file "
             "in the legal-doc-analyzer folder and restart the server."
         )
     if not document_text:
@@ -312,10 +312,10 @@ def chat_about_document(document_text: str, question: str, history: list) -> str
             messages=messages,
         )
     except Exception as e:
-        raise AnalyzerError(f"Claude API request failed: {e}") from e
+        raise AnalyzerError(f"AI request failed: {e}") from e
 
     text_parts = [b.text for b in resp.content if b.type == "text"]
     answer = "".join(text_parts).strip()
     if not answer:
-        raise AnalyzerError("Claude did not return an answer. Try again.")
+        raise AnalyzerError("Did not return an answer. Try again.")
     return answer
