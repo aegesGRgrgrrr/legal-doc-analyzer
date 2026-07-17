@@ -160,6 +160,30 @@ function renderResults(data) {
       </div>`).join("")
     : '<div class="empty-note">No obviously missing standard terms were identified.</div>';
 
+  const typosEl = document.getElementById("result-typos");
+  const typos = data.typos_grammar_issues || [];
+  typosEl.innerHTML = typos.length
+    ? typos.map(t => `<div class="typo-card">
+        <p class="issue">${escapeHtml(t.issue)}${t.location_hint ? ` <span class="location">(${escapeHtml(t.location_hint)})</span>` : ""}</p>
+        <p class="suggestion"><strong>Suggested:</strong> ${escapeHtml(t.suggestion)}</p>
+      </div>`).join("")
+    : '<div class="empty-note">No notable typos or grammatical errors were identified.</div>';
+
+  const confidentialityEl = document.getElementById("result-confidentiality");
+  const confidentiality = data.confidentiality_issues || [];
+  confidentialityEl.innerHTML = confidentiality.length
+    ? confidentiality.map(c => {
+        const rc = riskClass(c.severity);
+        return `<div class="clause-card ${rc}">
+          <div class="clause-top">
+            <span class="clause-title">${escapeHtml(c.issue)}</span>
+            <span class="risk-badge ${rc}">${rc === "none" ? "Note" : rc + " risk"}</span>
+          </div>
+          <p>${escapeHtml(c.explanation)}</p>
+        </div>`;
+      }).join("")
+    : '<div class="empty-note">No confidentiality concerns were identified.</div>';
+
   resultsEl.style.display = "block";
   resultsEl.scrollIntoView({ behavior: "smooth" });
 }

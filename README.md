@@ -46,6 +46,12 @@ amendments), click **Analyze Document**. Results appear on the same page:
 - **Obligations by Party** — concrete commitments and their triggers/deadlines
 - **Missing / Absent Terms** — standard protections that appear to be missing, with why it
   matters and a recommendation
+- **Typos & Grammar Errors** — genuine authoring errors in the document's own prose (PDF-extraction
+  artifacts like stray bullet glyphs or line-break hyphenation are filtered out), each with a
+  suggested correction
+- **Confidentiality Issues** — personal data (SSNs, home addresses, etc.) or sensitive/proprietary
+  content disclosed without adequate protection, or confidentiality language that contradicts how
+  the document says it will be handled
 - **Ask About This Document** — a chat box to ask follow-up questions ("what happens if the
   tenant misses a payment?"). Claude answers using only the uploaded document's text, held in
   your browser tab for the session (see Limitations below) — nothing is saved server-side.

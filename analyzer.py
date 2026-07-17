@@ -115,8 +115,37 @@ ANALYZE_SCHEMA = {
                     "required": ["term", "why_it_matters", "recommendation"],
                 },
             },
+            "typos_grammar_issues": {
+                "type": "array",
+                "description": "Actual typos, misspellings, or grammatical errors in the document's own prose (not PDF-extraction artifacts like stray bullet glyphs or broken line breaks).",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "location_hint": {"type": "string", "description": "Section/article/page if identifiable, or empty string."},
+                        "issue": {"type": "string", "description": "Quote or describe the problematic text and what's wrong with it."},
+                        "suggestion": {"type": "string", "description": "The corrected wording."},
+                    },
+                    "required": ["issue", "suggestion"],
+                },
+            },
+            "confidentiality_issues": {
+                "type": "array",
+                "description": "Confidentiality/privacy concerns in the document — e.g. personal data (SSNs, DOBs, personal contact/financial info), trade secrets or proprietary figures disclosed without a confidentiality marking or NDA reference, or sensitive content that appears inconsistent with the document's own stated confidentiality treatment.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "issue": {"type": "string"},
+                        "explanation": {"type": "string"},
+                        "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+                    },
+                    "required": ["issue", "explanation", "severity"],
+                },
+            },
         },
-        "required": ["document_type", "summary", "overall_confidence", "clauses", "obligations", "missing_terms"],
+        "required": [
+            "document_type", "summary", "overall_confidence", "clauses", "obligations",
+            "missing_terms", "typos_grammar_issues", "confidentiality_issues",
+        ],
     },
 }
 
@@ -233,6 +262,16 @@ poses no notable risk.
 - missing_terms: flag standard protections typical for this document type that appear absent — \
 e.g. no limitation of liability cap, no indemnification carve-outs, no assignment restriction, \
 no insurance requirement. Only list terms that would genuinely be expected for this document type.
+- typos_grammar_issues: flag genuine typos, misspellings, and grammatical errors in the document's \
+own prose. Do not flag artifacts of PDF text extraction — stray bullet glyphs, broken line-wrap \
+hyphenation, odd spacing, or truncated words at a page break are not real typos and must be \
+ignored. If you're not confident something is an actual authoring error rather than an extraction \
+artifact, leave it out. Leave this empty if the document reads cleanly.
+- confidentiality_issues: flag genuine confidentiality/privacy concerns — personal data (SSNs, \
+dates of birth, personal phone/email/financial account numbers), trade secrets or commercially \
+sensitive figures presented without any confidentiality marking or protective language, or content \
+that seems inconsistent with how the document itself claims to be treated (e.g. marked \
+confidential but drafted for wide distribution). Leave this empty if nothing stands out.
 - confidence scores should reflect real uncertainty — lower them when the document is ambiguous, \
 uses unusual defined terms, or is missing context (e.g. referenced exhibits not included).
 

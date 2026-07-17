@@ -277,6 +277,17 @@ legend {
 .missing-term-card p { margin: 3px 0; font-size: 12.5px; line-height: 1.5; }
 .missing-term-card .rec { color: var(--muted); }
 
+.typo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.typo-card .issue { margin: 0 0 4px; font-size: 13px; }
+.typo-card .suggestion { margin: 0; font-size: 12.5px; color: var(--muted); }
+.typo-card .location { font-size: 11.5px; color: var(--muted); font-weight: 400; }
+
 .empty-note { font-size: 12.5px; color: var(--muted); font-style: italic; }
 
 .chat-messages {
